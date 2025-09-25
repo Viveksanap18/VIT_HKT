@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>User Self-Service Dashboard</title>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- Chart.js Datalabels Plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <style>
+    body {
+      background: linear-gradient(180deg, #072426 0%, #0f2b2c 100%);
+      color: #ffffff;
+      font-family: "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .header {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding: 15px 20px;
+      background: #103538;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      color: #26d0ce;
+    }
+
+    .welcome {
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 25px;
+      padding: 20px;
+      background: #103538;
+      border-radius: 12px;
+      transition: transform 0.2s ease;
+    }
+
+    .welcome:hover {
+      transform: translateY(-3px);
+    }
+
+    .alert {
+      background: rgba(255, 193, 7, 0.15);
+      border: 2px solid #ffc107;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 15px;
+      text-align: left;
+      color: #ffc107;
+      font-size: 15px;
+    }
+
+    input[type="file"] {
+      margin: 20px 0;
+      padding: 12px;
+      background: #103538;
+      color: #ffffff;
+      border: 2px solid #2a5a5a;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: 0.3s;
+    }
+    input[type="file"]:hover {
+      border-color: #26d0ce;
+      background: #0d3a3d;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: #103538;
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+    }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: bold;
+      color: #26d0ce;
+    }
+    .stat-label {
+      font-size: 15px;
+      opacity: 0.85;
+      margin-top: 8px;
+    }
+
+    .upcoming-section, .chart-section {
+      width: 100%;
+      max-width: 1200px;
+      background: #103538;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 30px;
+      transition: transform 0.2s ease;
+    }
+    .upcoming-section:hover, .chart-section:hover {
+      transform: translateY(-3px);
+    }
+
+    .upcoming-title, .chart-title {
+      color: #26d0ce;
+      font-size: 20px;
+      margin: 0 0 15px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 2px solid #2a5a5a;
+    }
+    th {
+      background: #072426;
+      color: #26d0ce;
+      font-size: 15px;
+    }
+    tr {
+      transition: background 0.2s;
+    }
+    tr:hover {
+      background: rgba(38, 208, 206, 0.1);
+      cursor: pointer;
+    }
+
+    .chart-container {
+      width: 100%;
+      max-width: 600px;
+      height: 500px;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>User Self-Service Dashboard</h1>
+  </div>
+
+  <div class="welcome">
+    <h2>Upload your CSV file to update your campaign insights.</h2>
+    <div class="alert" id="anomalyAlert" style="display: none;">
+      ⚠ Anomaly detected: Check unusual performance in recent campaigns.
+    </div>
+  </div>
+
+  <input type="file" id="csvFile" accept=".csv,.txt" />
+
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-value" id="totalClicks">0</div>
+      <div class="stat-label">Total Clicks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="totalSpend">₹0</div>
+      <div class="stat-label">Total Spend (INR)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="conversions">0</div>
+      <div class="stat-label">Conversions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="roi">0.0</div>
+      <div class="stat-label">Avg ROI</div>
+    </div>
+  </div>
+
+  <div class="upcoming-section">
+    <h3 class="upcoming-title">Upcoming Campaigns (Starting After Sep 25, 2025)</h3>
+    <table id="upcomingTable">
+      <thead>
+        <tr>
+          <th>Campaign ID</th>
+          <th>Type</th>
+          <th>Start Date</th>
+          <th>Target Audience</th>
+          <th>Channel</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="chart-section">
+    <h3 class="chart-title">Your Campaign Performance by Type</h3>
+    <div class="chart-container">
+      <canvas id="performanceChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const usdToInrRate = 83; // conversion rate
+
+    document.getElementById("csvFile").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          const data = results.data;
+
+          let totalClicks = 0;
+          let totalSpendUsd = 0;
+          let conversions = 0;
+          let roiSum = 0;
+
+          let upcomingCampaigns = [];
+
+          const today = new Date("2025-09-25"); // current reference date
+
+          data.forEach(row => {
+            totalClicks += Number(row.Clicks || 0);
+            totalSpendUsd += Number(row.Spend || 0);
+            conversions += Number(row.Conversions || 0);
+            roiSum += Number(row.ROI || 0);
+
+            if (row["Start Date"]) {
+              const startDate = new Date(row["Start Date"]);
+              if (startDate > today) {
+                upcomingCampaigns.push({
+                  id: row["Campaign ID"],
+                  type: row["Type"],
+                  date: row["Start Date"],
+                  audience: row["Target Audience"],
+                  channel: row["Channel"]
+                });
+              }
+            }
+          });
+
+          // Convert USD → INR
+          let totalSpendInr = totalSpendUsd * usdToInrRate;
+
+          document.getElementById("totalClicks").textContent = totalClicks;
+          document.getElementById("totalSpend").textContent = "₹" + totalSpendInr.toLocaleString("en-IN");
+          document.getElementById("conversions").textContent = conversions;
+          document.getElementById("roi").textContent = (roiSum / data.length).toFixed(2);
+
+          // Populate upcoming campaigns table
+          const tbody = document.getElementById("upcomingTable").querySelector("tbody");
+          tbody.innerHTML = "";
+          upcomingCampaigns.forEach(c => {
+            const row = `<tr>
+              <td>${c.id}</td>
+              <td>${c.type}</td>
+              <td>${c.date}</td>
+              <td>${c.audience}</td>
+              <td>${c.channel}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+          });
+
+          // Chart
+          const ctx = document.getElementById("performanceChart").getContext("2d");
+          const types = {};
+          data.forEach(row => {
+            types[row.Type] = (types[row.Type] || 0) + Number(row.Clicks || 0);
+          });
+
+          new Chart(ctx, {
+            type: "pie",
+            data: {
+              labels: Object.keys(types),
+              datasets: [{
+                data: Object.values(types),
+                backgroundColor: ["#26d0ce", "#2a5a5a", "#ffc107", "#ff5722", "#4caf50"]
+              }]
+            },
+            options: {
+              plugins: {
+                datalabels: {
+                  color: "#fff",
+                  formatter: (value, ctx) => {
+                    let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                    let percentage = (value * 100 / sum).toFixed(1) + "%";
+                    return percentage;
+                  }
+                }
+              }
+            },
+            plugins: [ChartDataLabels]
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
